@@ -66,13 +66,15 @@ IF(WIN32)
 ELSE(WIN32)
   # Linux
   # lib
-  INSTALL(TARGETS mba DESTINATION lib/mba)
+  INSTALL(TARGETS mba DESTINATION lib/mba EXPORT mbaTargets)
   # include
   INSTALL(DIRECTORY include
     DESTINATION include/mba
     FILES_MATCHING PATTERN "*.h"
     PATTERN ".svn" EXCLUDE
     )
+    export(TARGETS mba FILE ${CMAKE_BINARY_DIR}/mbaConfig.cmake)
+    export(PACKAGE mba)
 ENDIF(WIN32)
 
 
