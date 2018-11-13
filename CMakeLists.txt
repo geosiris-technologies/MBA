@@ -1,84 +1,103 @@
-PROJECT(mba)
+cmake_minimum_required(VERSION 3.7.2 FATAL_ERROR)
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+project(mba)
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 
-# Include directories
+option(BUILD_EXAMPLES "Build examples" OFF)
 
-INCLUDE_DIRECTORIES(
-  ${mba_SOURCE_DIR}/include
-  )
-
-# Make the mba library
+add_library(${PROJECT_NAME} "")
 
 FILE(GLOB_RECURSE mba_SRCS src/*.C src/*.cpp include/*.h)
-ADD_LIBRARY(mba ${mba_SRCS})
-
-set_target_properties(mba PROPERTIES
-  CXX_STANDARD 11)
+target_sources(${PROJECT_NAME}
+	PRIVATE
+		${mba_SRCS}
+)
 
 # Set various compiler flags
 
-IF(NOT WIN32)
-  # Set warning level to '-Wall' on Linux
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-ELSE(NOT WIN32)
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP8
-  -D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS")
-ENDIF(NOT WIN32)
+target_compile_options(${PROJECT_NAME} PUBLIC
+	$<$<CXX_COMPILER_ID:GNU>:$<BUILD_INTERFACE:-Wall>>
+	$<$<CXX_COMPILER_ID:MSVC>:/MP8>
+)
 
-# Get rid of MESSAGEs in Release mode
-SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNVERBOSE")
+target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:Release>:-DNVERBOSE>)
 
+target_include_directories(${PROJECT_NAME} PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
 
-# Apps, examples, tests, ...?
-
-FILE(GLOB mba_APPS app/*.C app/*.cpp)
-FOREACH(app ${mba_APPS})
-  GET_FILENAME_COMPONENT(appname ${app} NAME_WE)
-  ADD_EXECUTABLE(${appname} ${app})
-  TARGET_LINK_LIBRARIES(${appname} mba)  
-ENDFOREACH(app)
-
-# Copy data
-ADD_CUSTOM_COMMAND(
-  TARGET mba
-  POST_BUILD
-  COMMAND ${CMAKE_COMMAND}
-  ARGS -E copy_directory ${mba_SOURCE_DIR}/Data 
-  ${mba_BINARY_DIR}/Data
-  )
+set_target_properties(${PROJECT_NAME} PROPERTIES
+	DEBUG_POSTFIX "_d")
 
 
-# 'install' target
+if(BUILD_EXAMPLES)
+	add_subdirectory(app)
+endif()
 
-IF(WIN32)
-  # Windows
-  SET(CMAKE_INSTALL_PREFIX CACHE INTERNAL "")
-  SET(mba_INSTALL_PREFIX "$ENV{PROGRAMFILES}/MBA"
-    CACHE PATH "Path to install MBA")
-  INSTALL(TARGETS mba DESTINATION ${mba_INSTALL_PREFIX}/lib)
-  INSTALL(DIRECTORY include
-    DESTINATION ${mba_INSTALL_PREFIX}/include
-    FILES_MATCHING PATTERN "*.h"
-    PATTERN ".svn" EXCLUDE
-    )
-ELSE(WIN32)
-  # Linux
-  # lib
-  INSTALL(TARGETS mba DESTINATION lib/mba EXPORT mbaTargets)
-  # include
-  INSTALL(DIRECTORY include
-    DESTINATION include/mba
-    FILES_MATCHING PATTERN "*.h"
-    PATTERN ".svn" EXCLUDE
-    )
-    export(TARGETS mba FILE ${CMAKE_BINARY_DIR}/mbaConfig.cmake)
-    export(PACKAGE mba)
-ENDIF(WIN32)
+include(GnuInstallDirs)
+include(CMakePackageConfigHelpers)
+
+#build tree
+
+export(TARGETS ${PROJECT_NAME}
+	NAMESPACE mba::
+	FILE "${CMAKE_BINARY_DIR}/lib/cmake/${PROJECT_NAME}/${PROJECT_NAME}Targets.cmake"
+)
+
+configure_package_config_file(
+	"${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake.in"
+	"${CMAKE_BINARY_DIR}/lib/cmake/${PROJECT_NAME}/${PROJECT_NAME}Config.cmake"
+	INSTALL_DESTINATION "${CMAKE_BINARY_DIR}/lib/cmake/${PROJECT_NAME}"
+	NO_SET_AND_CHECK_MACRO
+	NO_CHECK_REQUIRED_COMPONENTS_MACRO
+)
+
+write_basic_package_version_file(
+	"${CMAKE_BINARY_DIR}/lib/cmake/${PROJECT_NAME}/${PROJECT_NAME}ConfigVersion.cmake"
+	VERSION 1.3.0
+	COMPATIBILITY ExactVersion
+)
 
 
-# CPack stuff
-SET(CPACK_SOURCE_PACKAGE_FILE_NAME "MBA-1.3.0")
-SET(CPACK_SOURCE_IGNORE_FILES "/CVS/;/\\.svn/;\\.swp$;\\.#;/#;.*~")
-INCLUDE(CPack)
+#install tree
+
+install(TARGETS ${PROJECT_NAME}
+	EXPORT ${PROJECT_NAME}Targets
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(EXPORT ${PROJECT_NAME}Targets
+		NAMESPACE mba::
+		DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
+)
+
+## <package_name>ConfigVersion.cmake
+write_basic_package_version_file(
+	"${CMAKE_BINARY_DIR}/cmake/${PROJECT_NAME}/${PROJECT_NAME}ConfigVersion.cmake"
+	VERSION 1.3.0
+	COMPATIBILITY ExactVersion
+)
+
+## <package_name>Config.cmake
+configure_package_config_file(
+	"${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake.in"
+	"${CMAKE_BINARY_DIR}/cmake/${PROJECT_NAME}/${PROJECT_NAME}InstallConfig.cmake"
+	INSTALL_DESTINATION "lib/cmake/${PROJECT_NAME}"
+	NO_SET_AND_CHECK_MACRO
+	NO_CHECK_REQUIRED_COMPONENTS_MACRO
+)
+
+install(FILES "${CMAKE_BINARY_DIR}/cmake/${PROJECT_NAME}/${PROJECT_NAME}ConfigVersion.cmake" DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+install(FILES "${CMAKE_BINARY_DIR}/cmake/${PROJECT_NAME}/${PROJECT_NAME}InstallConfig.cmake" DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}" RENAME "${PROJECT_NAME}Config.cmake")
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+	DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mba
+	COMPONENT mba_headers
+	FILES_MATCHING PATTERN "*.h"
+	REGEX "doxy*" EXCLUDE
+)
