@@ -38,7 +38,7 @@ if(BUILD_EXAMPLES)
 	add_subdirectory(app)
 endif()
 
-include(GnuInstallDirs)
+include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 #build tree
