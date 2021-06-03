@@ -38,7 +38,7 @@
  */
 
 
-#include "checkWIN32andSGI.h"
+#include <checkWIN32andSGI.h>
 #include <MBAdata.h>
 #include <algorithm>
 

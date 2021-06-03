@@ -40,7 +40,7 @@
 
 #include <stdexcept>
 #include <vector>
-#include "filterRestrict2D.h"
+#include <filterRestrict2D.h>
 
 using namespace std;
 
