@@ -5,11 +5,12 @@ project(mba)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 
+option(BUILD_SHARED_LIBS "Build shared library" OFF)
 option(BUILD_EXAMPLES "Build examples" OFF)
 
 add_library(${PROJECT_NAME} "")
 
-FILE(GLOB_RECURSE mba_SRCS src/*.C src/*.cpp include/*.h)
+FILE(GLOB_RECURSE mba_SRCS src/*.cpp include/*.h)
 target_sources(${PROJECT_NAME}
 	PRIVATE
 		${mba_SRCS}
